@@ -116,6 +116,7 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
         .build()?;
 
     TrayIconBuilder::new()
+        .icon(app.default_window_icon().unwrap().clone())
         .menu(&tray_menu)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::DoubleClick { .. } = event {
