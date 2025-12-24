@@ -6,6 +6,10 @@
 
 A minimal Tauri v2 + React app to search and input Unicode symbols quickly. The app lives in the tray, opens a Quick Input window with a global hotkey, and lets users manage custom key→symbol mappings.
 
+
+https://github.com/user-attachments/assets/2de3b747-a63c-4ece-9917-daa314531515
+
+
 ## Features
 - Quick Input pop-up (Combobox, underline style) with case-sensitive ranking and note search; outputs via Windows `SendInput`.
 - Built-in mapping set (Greek letters + common math symbols) plus user mappings stored in IndexedDB; user keys override built-ins on exact key match.
