@@ -249,26 +249,30 @@ pub fn run() {
             update_hotkey
         ])
         .setup(|app| {
+            let exe = std::env::current_exe().ok();
+            let version = app.package_info().version.clone();
+            println!("RUNNING EXE = {:?}", exe);
+            println!("APP VERSION  = {}", version);
             create_windows(app)?;
             build_tray(app)?;
             register_hotkey(&app.handle());
+            // Background check only; actual install is triggered from the frontend.
             let updater_app = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                if let Ok(updater) = updater_app.updater() {
-                    match updater.check().await {
+                match updater_app.updater() {
+                    Ok(updater) => match updater.check().await {
                         Ok(Some(update)) => {
-                            if let Err(err) = update
-                                .download_and_install(|_, _| {}, || {
-                                    let _ = updater_app.restart();
-                                })
-                                .await
-                            {
-                                eprintln!("failed to install update: {err}");
-                            }
+                            println!(
+                                "[updater] update available (background notice): {} -> {}",
+                                update.current_version, update.version
+                            );
                         }
-                        Ok(None) => {}
-                        Err(err) => eprintln!("failed to check updates: {err}"),
-                    }
+                        Ok(None) => {
+                            println!("[updater] no update available");
+                        }
+                        Err(err) => eprintln!("[updater] failed to check updates: {err}"),
+                    },
+                    Err(err) => eprintln!("[updater] failed to init updater: {err}"),
                 }
             });
             Ok(())

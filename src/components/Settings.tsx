@@ -41,6 +41,7 @@ import {
 } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
+import { check, Update } from "@tauri-apps/plugin-updater";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { deleteUserMapping, getSettings, listUserMappings, saveSettings, upsertUserMapping } from "../lib/db";
 
@@ -176,6 +177,10 @@ export default function Settings() {
   const [form, setForm] = useState<MappingRow>({ key: "", value: "", note: "" });
   const { dispatchToast } = useToastController();
   const [version, setVersion] = useState("");
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [installingUpdate, setInstallingUpdate] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const updateRef = useRef<Update | null>(null);
 
   const columns: TableColumnDefinition<MappingRow>[] = useMemo(
     () => [
@@ -289,6 +294,38 @@ export default function Settings() {
       notify("Hotkey saved");
     } catch (err: any) {
       notify(err?.toString() ?? "Failed to save hotkey");
+    }
+  };
+
+  const handleCheckUpdate = async () => {
+    if (checkingUpdate) return;
+    setCheckingUpdate(true);
+    try {
+      const result = await check();
+      if (result && result.available) {
+        updateRef.current = result;
+        setUpdateDialogOpen(true);
+      } else {
+        notify("No update available");
+      }
+    } catch (err: any) {
+      notify(err?.toString() ?? "Failed to check updates");
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    const updater = updateRef.current;
+    if (!updater || installingUpdate) return;
+    setInstallingUpdate(true);
+    try {
+      await updater.downloadAndInstall();
+    } catch (err: any) {
+      notify(err?.toString() ?? "Failed to install update");
+    } finally {
+      setInstallingUpdate(false);
+      setUpdateDialogOpen(false);
     }
   };
 
@@ -407,6 +444,16 @@ export default function Settings() {
       <div className="settings-footer">
         <Caption1>{version ? `Version ${version}` : "Version unknown"}</Caption1>
         <div className="manager-actions">
+          <Tooltip content="Check for updates" relationship="label">
+            <Button
+              size="small"
+              appearance="secondary"
+              onClick={handleCheckUpdate}
+              disabled={checkingUpdate || installingUpdate}
+            >
+              {checkingUpdate ? "Checking..." : "Check updates"}
+            </Button>
+          </Tooltip>
           <Tooltip content="Launch Quick Input" relationship="label">
             <Button size="small" icon={<OpenRegular />} appearance="secondary" onClick={() => invoke("toggle_quick_input")}>
               Open Quick Input
@@ -419,6 +466,31 @@ export default function Settings() {
           </Tooltip>
         </div>
       </div>
+
+      <Dialog open={updateDialogOpen} onOpenChange={(_, d) => setUpdateDialogOpen(d.open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Update available</DialogTitle>
+            <DialogContent>
+              <Body1>
+                {updateRef.current
+                  ? `Install version ${updateRef.current.version}?`
+                  : "Install the latest update?"}
+              </Body1>
+            </DialogContent>
+            <DialogActions>
+              <DialogTrigger disableButtonEnhancement>
+                <Button appearance="secondary" onClick={() => setUpdateDialogOpen(false)} disabled={installingUpdate}>
+                  Later
+                </Button>
+              </DialogTrigger>
+              <Button appearance="primary" onClick={handleInstallUpdate} disabled={installingUpdate}>
+                {installingUpdate ? "Installing..." : "Install now"}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 }
