@@ -3648,7 +3648,7 @@ dependencies = [
 
 [[package]]
 name = "symbolpop"
-version = "0.2.0"
+version = "0.2.2"
 dependencies = [
  "serde",
  "serde_json",
