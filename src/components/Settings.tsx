@@ -40,6 +40,7 @@ import {
   ArrowRightRegular,
 } from "@fluentui/react-icons";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { deleteUserMapping, getSettings, listUserMappings, saveSettings, upsertUserMapping } from "../lib/db";
 
@@ -174,6 +175,7 @@ export default function Settings() {
   const [editing, setEditing] = useState<MappingRow | null>(null);
   const [form, setForm] = useState<MappingRow>({ key: "", value: "", note: "" });
   const { dispatchToast } = useToastController();
+  const [version, setVersion] = useState("");
 
   const columns: TableColumnDefinition<MappingRow>[] = useMemo(
     () => [
@@ -216,6 +218,9 @@ export default function Settings() {
 
   useEffect(() => {
     void refreshAll();
+    void getVersion()
+      .then((v) => setVersion(v))
+      .catch(() => setVersion(""));
   }, []);
 
   const filtered = useMemo(() => {
@@ -399,17 +404,20 @@ export default function Settings() {
         </div>
       </section>
 
-      <div className="manager-actions sticky-bottom">
-        <Tooltip content="Launch Quick Input" relationship="label">
-          <Button size="small" icon={<OpenRegular />} appearance="secondary" onClick={() => invoke("toggle_quick_input")}>
-            Open Quick Input
-          </Button>
-        </Tooltip>
-        <Tooltip content="Refresh all data" relationship="label">
-          <Button size="small" icon={<ArrowClockwiseRegular />} appearance="secondary" onClick={refreshAll}>
-            Refresh
-          </Button>
-        </Tooltip>
+      <div className="settings-footer">
+        <Caption1>{version ? `Version ${version}` : "Version unknown"}</Caption1>
+        <div className="manager-actions">
+          <Tooltip content="Launch Quick Input" relationship="label">
+            <Button size="small" icon={<OpenRegular />} appearance="secondary" onClick={() => invoke("toggle_quick_input")}>
+              Open Quick Input
+            </Button>
+          </Tooltip>
+          <Tooltip content="Refresh all data" relationship="label">
+            <Button size="small" icon={<ArrowClockwiseRegular />} appearance="secondary" onClick={refreshAll}>
+              Refresh
+            </Button>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );

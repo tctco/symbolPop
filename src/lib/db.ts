@@ -12,6 +12,7 @@ type UserMapping = {
 type Settings = {
   id: "global";
   hotkey: string;
+  recentKeys?: string[];
 };
 
 interface SymbolPopDB extends DBSchema {
@@ -28,6 +29,7 @@ interface SymbolPopDB extends DBSchema {
 
 const DB_NAME = "unicode_quick_input";
 const DB_VERSION = 1;
+const RECENT_LIMIT = 30;
 
 async function getDB(): Promise<IDBPDatabase<SymbolPopDB>> {
   return openDB<SymbolPopDB>(DB_NAME, DB_VERSION, {
@@ -73,11 +75,23 @@ export async function listUserMappings(): Promise<UserMapping[]> {
 export async function getSettings(): Promise<Settings> {
   const db = await getDB();
   const settings = await db.get("settings", "global");
-  return settings ?? { id: "global", hotkey: "Alt+S" };
+  return settings ?? { id: "global", hotkey: "Alt+S", recentKeys: [] };
 }
 
 export async function saveSettings(settings: Settings) {
   const db = await getDB();
   await db.put("settings", settings);
+}
+
+export async function recordRecentKey(key: string) {
+  const settings = await getSettings();
+  const current = settings.recentKeys ?? [];
+  const next = [key, ...current.filter((k) => k !== key)].slice(0, RECENT_LIMIT);
+  await saveSettings({ ...settings, recentKeys: next });
+}
+
+export async function getRecentKeys(): Promise<string[]> {
+  const settings = await getSettings();
+  return settings.recentKeys ?? [];
 }
 

@@ -24,8 +24,7 @@ fn show_quick_input(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 fn hide_quick_input(app: AppHandle) -> Result<(), String> {
-    quick_window(&app)
-        .and_then(|w| w.hide().map_err(|e| e.to_string()))
+    quick_window(&app).and_then(|w| w.hide().map_err(|e| e.to_string()))
 }
 
 #[tauri::command]
@@ -107,9 +106,7 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
     let settings_item = MenuItemBuilder::new("Settings")
         .id("open_settings")
         .build(app)?;
-    let quit_item = MenuItemBuilder::new("Quit")
-        .id("quit")
-        .build(app)?;
+    let quit_item = MenuItemBuilder::new("Quit").id("quit").build(app)?;
 
     let tray_menu = MenuBuilder::new(app)
         .items(&[&quick_item, &settings_item, &quit_item])
@@ -144,14 +141,15 @@ fn register_hotkey(app: &tauri::AppHandle) {
         Ok(shortcut) => {
             let app_handle = app.clone();
             let handler_app = app_handle.clone();
-            if let Err(err) = app_handle.global_shortcut().on_shortcut(
-                shortcut.clone(),
-                move |_, _, event| {
-                    if event.state == ShortcutState::Pressed {
-                        let _ = toggle_quick_input(handler_app.clone());
-                    }
-                },
-            ) {
+            if let Err(err) =
+                app_handle
+                    .global_shortcut()
+                    .on_shortcut(shortcut.clone(), move |_, _, event| {
+                        if event.state == ShortcutState::Pressed {
+                            let _ = toggle_quick_input(handler_app.clone());
+                        }
+                    })
+            {
                 eprintln!("failed to register shortcut handler: {err}");
             }
         }
@@ -237,6 +235,7 @@ fn inject_text_windows(text: &str) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
