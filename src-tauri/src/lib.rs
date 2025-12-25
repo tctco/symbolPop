@@ -4,6 +4,7 @@ use tauri::{
     AppHandle, LogicalSize, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri_plugin_updater::UpdaterExt;
 #[cfg(windows)]
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, KEYEVENTF_UNICODE,
@@ -115,6 +116,7 @@ fn build_tray(app: &mut tauri::App) -> tauri::Result<()> {
     TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&tray_menu)
+        .show_menu_on_left_click(false)
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::DoubleClick { .. } = event {
                 let _ = show_settings(tray.app_handle().clone());
@@ -250,6 +252,25 @@ pub fn run() {
             create_windows(app)?;
             build_tray(app)?;
             register_hotkey(&app.handle());
+            let updater_app = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Ok(updater) = updater_app.updater() {
+                    match updater.check().await {
+                        Ok(Some(update)) => {
+                            if let Err(err) = update
+                                .download_and_install(|_, _| {}, || {
+                                    let _ = updater_app.restart();
+                                })
+                                .await
+                            {
+                                eprintln!("failed to install update: {err}");
+                            }
+                        }
+                        Ok(None) => {}
+                        Err(err) => eprintln!("failed to check updates: {err}"),
+                    }
+                }
+            });
             Ok(())
         })
         .run(tauri::generate_context!())

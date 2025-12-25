@@ -8,6 +8,7 @@ on:
 
 jobs:
   build-windows:
+    environment: production
     runs-on: windows-latest
     defaults:
       run:
